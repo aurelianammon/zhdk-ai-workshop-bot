@@ -138,7 +138,7 @@ bot.command("stats", async (ctx) => {
 // ];
 let numberOfMessages = 1000;
 
-bot.hears(/\b(?:imagine)\b/, async (ctx) => {
+bot.hears(/\b(?:imagine|Traum)\b/, async (ctx) => {
   // Send the user's message to the ChatGPT API for images
   const response = await openai.createImage({
     prompt: ctx.message.text,
