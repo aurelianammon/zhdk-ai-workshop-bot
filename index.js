@@ -104,7 +104,7 @@ bot.command("link", async (ctx) => {
 
 bot.command("help", async (ctx) => {
   const text =
-    "Echo ist ein AI-gesteuerten ChatBot, welcher speziell für «AI Encounter» entwickelt wurde, um auf persönliche und einladende Weise Wissen zu vermitteln. Um mit Echo in ein Gespräch einzusteigen, genügt es, Echo direkt anzusprechen. Ähnlich wie bei vielen KI-Systemen sind nicht alle Potenziale von Beginn an offensichtlich. Deshalb ermutigen wir dazu, verschiedene Ansätze auszuprobieren und aktiv mit Echo in Interaktion zu treten, um die vielfältigen Möglichkeiten zu entdecken, die es zu bieten hat. \n\nEntwickelt und umgesetzt vom Designstudio alles-negativ.";
+    "Chatoni ist ein AI-gesteuerten ChatBot, welcher speziell für «AI Encounter» entwickelt wurde, um auf persönliche und einladende Weise Wissen zu vermitteln. Im hintergrund werden ChatGTP und ähnliche Technologien benutzt. Um mit Chatoni in ein Gespräch einzusteigen, genügt es, Chatoni direkt anzusprechen. Ähnlich wie bei vielen KI-Systemen sind nicht alle Potenziale von Beginn an offensichtlich. Deshalb ermutigen wir dazu, verschiedene Ansätze auszuprobieren und aktiv mit Echo in Interaktion zu treten, um die vielfältigen Möglichkeiten zu entdecken, die es zu bieten hat. \n\nEntwickelt und umgesetzt vom Designstudio alles-negativ.";
   bot.telegram.sendMessage(
     ctx.chat.id,
     text.replace(/[_*\~`>#\+\-=|{}.!]/g, "\\$&"),
@@ -151,7 +151,7 @@ bot.hears(/\b(?:imagine)\b/, async (ctx) => {
   );
 });
 
-bot.hears(/\b(?:echo|Echo)\b/, async (ctx) => {
+bot.hears(/\b(?:Chatoni|chatoni)\b/, async (ctx) => {
   let messages = await storage.getItem("messages");
   let context = await storage.getItem("context");
   messages.push({
