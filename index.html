@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Echo Backend Interface</title>
+    <link rel="stylesheet" type="text/css" href="./reset.css" />
+    <link rel="stylesheet" type="text/css" href="./main.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div class="job" v-for="job in jobs">
+        <div class="header">
+          <div class="text">{{ new Date(job.date).toUTCString() }}</div>
+          <button class="controll_button" @click="remove_job(job.id, $event)">
+            Remove
+          </button>
+        </div>
+        <div class="message">{{ job.message }}</div>
+      </div>
+      <input v-model="text" />
+      <input v-model="date" type="datetime-local" />
+      <button @click="add_job">Add</button>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="./script.js"></script>
+  </body>
+</html>
