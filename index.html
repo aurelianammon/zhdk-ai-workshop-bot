@@ -4,21 +4,41 @@
     <title>Echo Backend Interface</title>
     <link rel="stylesheet" type="text/css" href="./reset.css" />
     <link rel="stylesheet" type="text/css" href="./main.css" />
+    <script type="module" src="https://md-block.verou.me/md-block.js"></script>
   </head>
   <body>
     <div id="app">
-      <div class="job" v-for="job in jobs">
-        <div class="header">
-          <div class="text">{{ new Date(job.date).toUTCString() }}</div>
-          <button class="controll_button" @click="remove_job(job.id, $event)">
-            Remove
-          </button>
-        </div>
-        <div class="message">{{ job.message }}</div>
+      <h1>Echo Backend Interface</h1>
+      <div class="context">
+        <h2>Context of the Bot</h2>
+        <textarea cols="30" rows="10" v-model="context"></textarea>
+        <button @click="update_context">Update Context</button>
       </div>
-      <input v-model="text" />
-      <input v-model="date" type="datetime-local" />
-      <button @click="add_job">Add</button>
+      <div class="scheduler">
+        <h2>Task Scheduler</h2>
+        <div class="add">
+          <textarea rows="4" v-model="text"></textarea>
+          <input v-model="date" type="datetime-local" />
+          <button @click="add_job">Add Task</button>
+        </div>
+        <div
+          class="job"
+          v-for="job in filtered_jobs"
+          :class="{ 'inactive' : !job.state }"
+        >
+          <div class="header">
+            <div class="text">{{ new Date(job.date).toUTCString() }}</div>
+            <button
+              class="controll_button"
+              @click="remove_job(job.id, $event) "
+            >
+              Remove
+            </button>
+          </div>
+          <div class="message">{{ job.message }}</div>
+          <!-- <md-block class="message"> {{ job.message }} </md-block> -->
+        </div>
+      </div>
     </div>
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>

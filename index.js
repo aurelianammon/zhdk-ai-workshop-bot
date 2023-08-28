@@ -28,6 +28,13 @@ async function init() {
   // await storage.setItem("messages", [
   //   { role: "system", content: system_prompt },
   // ]);
+  // await storage.setItem("context", [
+  //   {
+  //     role: "system",
+  //     content:
+  //       "You are a teaching assistant involved in an AI workshop at ZHdK, an art school in Zürich. Keep your answers short and do not make lists or other boring text blocks. Your goal is to teach the participants about AI in various ways. Telling interesting stories or facts might be one of your tools. If it is the first time some one is writing a message within this chat, say hello or welcome the person with it's name, but only if newly eentered the conversation. Do not say the name of the user to often ore repetedly, it is enough to use it in the begining and maybe from time to time during the conversation. It is not good to repeat names to often, therefore do not end a sentence with the name of the user if it is not neccesary. Never start a sentence with 'Assistant: ' or similar, it is not nessesary.",
+  //   },
+  // ]);
 }
 
 async function jobs_init() {
@@ -43,7 +50,12 @@ async function job_init(job) {
   const job_id = schedule.scheduleJob(job.id, date, async function () {
     // console.log(job.message);
     const id = await storage.getItem("conversation");
-    bot.telegram.sendMessage(id, job.message, { parse_mode: "MarkdownV2" });
+    bot.telegram.sendMessage(
+      id,
+      job.message.replace(/[_*\~`>#\+\-=|{}.!]/g, "\\$&"),
+      { parse_mode: "MarkdownV2" }
+    );
+    io.emit("refresh");
   });
 }
 
@@ -90,6 +102,21 @@ bot.command("link", async (ctx) => {
   bot.telegram.sendMessage(ctx.chat.id, "Linked to " + conversation, {});
 });
 
+bot.command("help", async (ctx) => {
+  const text =
+    "Echo ist ein AI-gesteuerten ChatBot, welcher speziell für «AI Encounter» entwickelt wurde, um auf persönliche und einladende Weise Wissen zu vermitteln. Um mit Echo in ein Gespräch einzusteigen, genügt es, Echo direkt anzusprechen. Ähnlich wie bei vielen KI-Systemen sind nicht alle Potenziale von Beginn an offensichtlich. Deshalb ermutigen wir dazu, verschiedene Ansätze auszuprobieren und aktiv mit Echo in Interaktion zu treten, um die vielfältigen Möglichkeiten zu entdecken, die es zu bieten hat. \n\nEntwickelt und umgesetzt vom Designstudio alles-negativ.";
+  bot.telegram.sendMessage(
+    ctx.chat.id,
+    text.replace(/[_*\~`>#\+\-=|{}.!]/g, "\\$&"),
+    { parse_mode: "MarkdownV2" }
+  );
+});
+
+bot.command("empty", async (ctx) => {
+  await storage.setItem("messages", []);
+  // bot.telegram.sendMessage(ctx.chat.id, "Linked to " + conversation, {});
+});
+
 bot.command("stats", async (ctx) => {
   const data = await storage.getItem("conversation");
   bot.telegram.sendMessage(ctx.chat.id, "Active conversation: " + data, {});
@@ -102,8 +129,14 @@ bot.command("stats", async (ctx) => {
   // );
 });
 
-// let system_prompt =
-//   "You are a teaching assistant involved in an AI workshop at ZHdK, an art school in Zürich. Keep your answers short and do not make lists or other boring text blocks. Your goal is to teach the participants about AI in various ways. Telling interesting stories or facts might be one of your tools.";
+// let system_prompt = [
+//   {
+//     role: "system",
+//     content:
+//       "You are a teaching assistant involved in an AI workshop at ZHdK, an art school in Zürich. Keep your answers short and do not make lists or other boring text blocks. Your goal is to teach the participants about AI in various ways. Telling interesting stories or facts might be one of your tools. If it is the first time some one is writing a message within this chat, say hello or welcome the person with it's name, but only if newly eentered the conversation. Do not say the name of the user to often ore repetedly, it is enough to use it in the begining and maybe from time to time during the conversation. It is not good to repeat names to often, therefore do not end a sentence with the name of the user if it is not neccesary. Never start a sentence with 'Assistant: ' or similar, it is not nessesary.",
+//   },
+// ];
+let numberOfMessages = 1000;
 
 bot.hears(/\b(?:imagine)\b/, async (ctx) => {
   // Send the user's message to the ChatGPT API for images
@@ -120,6 +153,7 @@ bot.hears(/\b(?:imagine)\b/, async (ctx) => {
 
 bot.hears(/\b(?:echo|Echo)\b/, async (ctx) => {
   let messages = await storage.getItem("messages");
+  let context = await storage.getItem("context");
   messages.push({
     role: "user",
     content: ctx.message.from.first_name + ": " + ctx.message.text,
@@ -128,12 +162,12 @@ bot.hears(/\b(?:echo|Echo)\b/, async (ctx) => {
   const chatCompletion = await openai.createChatCompletion({
     model: "gpt-3.5-turbo",
     // model: "gpt-4",
-    messages: messages,
+    messages: context.concat(messages),
   });
   // Send the response from ChatGPT back to the user
   let text = chatCompletion.data.choices[0].message.content;
   messages.push({ role: "assistant", content: text });
-  await storage.setItem("messages", messages);
+  await storage.setItem("messages", messages.slice(-numberOfMessages));
   ctx.reply(text);
 });
 
@@ -143,7 +177,7 @@ bot.on("message", async (ctx) => {
     role: "user",
     content: ctx.message.from.first_name + ": " + ctx.message.text,
   });
-  await storage.setItem("messages", messages);
+  await storage.setItem("messages", messages.slice(-numberOfMessages));
 });
 
 // define express routes
@@ -153,17 +187,31 @@ app.get("/", (req, res) => {
 app.get("/jobs", async (req, res) =>
   res.json(await storage.getItem("scheduled_jobs"))
 );
+app.get("/context", async (req, res) => {
+  let context = await storage.getItem("context");
+  // console.log(context);
+  res.json(context[0].content);
+});
 
 // define socket.io commands
 io.on("connection", (socket) => {
   socket.on("chat message", (msg) => {
     console.log("message: " + msg);
+    io.emit("refresh"); // there is some issue with who is included in the broadcast, I d not know yet
   });
   socket.on("add date", (msg) => {
     job_add(new Date(msg[0]), msg[1]);
+    io.emit("refresh");
   });
   socket.on("remove date", (msg) => {
     job_remove(msg);
+    io.emit("refresh");
+  });
+  socket.on("update context", async (msg) => {
+    let context = await storage.getItem("context");
+    context[0].content = msg;
+    await storage.setItem("context", context);
+    io.emit("refresh");
   });
 });
 
