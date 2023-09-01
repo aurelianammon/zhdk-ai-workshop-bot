@@ -2,6 +2,7 @@
   "dependencies": {
     "dotenv": "^16.2.0",
     "express": "^4.18.2",
+    "express-fileupload": "^1.4.0",
     "langchain": "^0.0.131",
     "node-persist": "^3.1.3",
     "node-schedule": "^2.1.1",

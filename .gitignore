@@ -132,3 +132,5 @@ dist
 # other things
 .DS_Store
 package-lock.json
+assets/upload/images/*
+assets/upload/videos/*

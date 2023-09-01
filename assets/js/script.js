@@ -8,7 +8,11 @@ createApp({
       text: "",
       jobs: [],
       date: null,
+      type: "TEXT",
       context: "",
+      images: [],
+      videos: [],
+      FILE: null,
     };
   },
   computed: {
@@ -25,7 +29,8 @@ createApp({
   },
   methods: {
     add_job(e) {
-      socket.emit("add date", [this.date, this.text]);
+      let text = marked.parseInline(this.text);
+      socket.emit("add date", [this.date, text, this.type]);
       //   this.update();
       this.text = "";
       this.date = null;
@@ -53,6 +58,27 @@ createApp({
         .then((response) => response.json())
         .then((data) => (tempData = data));
       this.context = tempData;
+      await fetch("/files") // <-- this path surprises me
+        .then((response) => response.json())
+        .then((data) => (tempData = data));
+      this.images = tempData.images;
+      this.videos = tempData.videos;
+    },
+    onSubmit() {
+      // upload file
+      if (this.$refs.fileupload.files[0] != undefined) {
+        const formData = new FormData();
+        formData.append("type", this.type);
+        formData.append("file", this.$refs.fileupload.files[0]);
+        fetch("/upload", {
+          method: "POST",
+          body: formData,
+        }).then((res) => {
+          console.log(res);
+          this.$refs.fileupload.value = null;
+        });
+      }
+      this.has_file = false;
     },
   },
   mounted() {

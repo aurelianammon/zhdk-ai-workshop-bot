@@ -1,6 +1,7 @@
 require("dotenv").config();
 const schedule = require("node-schedule");
 const { v4: uuidv4 } = require("uuid");
+const fs = require("fs");
 
 const { Telegraf } = require("telegraf");
 const bot = new Telegraf(process.env.TELEGRAM_KEY);
@@ -10,7 +11,10 @@ const configuration = new Configuration({ apiKey: process.env.OPENAI_KEY });
 const openai = new OpenAIApi(configuration);
 
 const express = require("express");
+const fileUpload = require("express-fileupload");
 const app = express();
+// Use the express-fileupload middleware
+app.use(fileUpload());
 app.use(express.static(__dirname + "/assets"));
 const http = require("http");
 const server = http.createServer(app);
@@ -23,18 +27,23 @@ async function init() {
   // you must first call storage.init
   await storage.init();
   // create storage items here, only use to initiate, or the data will be overwriten
-  // await storage.setItem("conversation", Integer);
-  // await storage.setItem("scheduled_jobs", [{id, date, string, parameter}]);
-  // await storage.setItem("messages", [
-  //   { role: "system", content: system_prompt },
-  // ]);
-  // await storage.setItem("context", [
-  //   {
-  //     role: "system",
-  //     content:
-  //       "You are a teaching assistant involved in an AI workshop at ZHdK, an art school in Zürich. Keep your answers short and do not make lists or other boring text blocks. Your goal is to teach the participants about AI in various ways. Telling interesting stories or facts might be one of your tools. If it is the first time some one is writing a message within this chat, say hello or welcome the person with it's name, but only if newly eentered the conversation. Do not say the name of the user to often ore repetedly, it is enough to use it in the begining and maybe from time to time during the conversation. It is not good to repeat names to often, therefore do not end a sentence with the name of the user if it is not neccesary. Never start a sentence with 'Assistant: ' or similar, it is not nessesary.",
-  //   },
-  // ]);
+  if ((await storage.getItem("conversation")) == undefined) {
+    await storage.setItem("conversation", 0);
+  }
+  if ((await storage.getItem("scheduled_jobs")) == undefined) {
+    await storage.setItem("scheduled_jobs", []);
+  }
+  if ((await storage.getItem("messages")) == undefined) {
+    await storage.setItem("messages", []);
+  }
+  if ((await storage.getItem("context")) == undefined) {
+    await storage.setItem("context", [
+      {
+        role: "system",
+        content: "Define bot context here",
+      },
+    ]);
+  }
 }
 
 async function jobs_init() {
@@ -48,24 +57,40 @@ async function jobs_init() {
 async function job_init(job) {
   const date = new Date(job.date);
   const job_id = schedule.scheduleJob(job.id, date, async function () {
-    // console.log(job.message);
-    const id = await storage.getItem("conversation");
-    bot.telegram.sendMessage(
-      id,
-      job.message.replace(/[_*\~`>#\+\-=|{}.!]/g, "\\$&"),
-      { parse_mode: "MarkdownV2" }
-    );
+    if (job.type == "IMAGE") {
+      bot.telegram.sendPhoto(await storage.getItem("conversation"), {
+        source: __dirname + "/assets/upload/images/" + job.message,
+      });
+    }
+    if (job.type == "VIDEO") {
+      const readStream = fs.createReadStream(
+        __dirname + "/assets/upload/videos/" + job.message
+      );
+      await bot.telegram.sendVideo(await storage.getItem("conversation"), {
+        source: readStream,
+      });
+    }
+    if (job.type == "TEXT") {
+      // console.log(job.message);
+      const id = await storage.getItem("conversation");
+      bot.telegram.sendMessage(
+        id,
+        // job.message.replace(/[_*\~`>#\+\-=|{}.!]/g, "\\$&"),
+        job.message,
+        { parse_mode: "html" }
+      );
+    }
     io.emit("refresh");
   });
 }
 
-async function job_add(date, message, parameter = 0) {
+async function job_add(date, message, type) {
   let all_jobs = await storage.getItem("scheduled_jobs");
   new_job = {
     id: uuidv4(),
     date: date,
     message: message,
-    parameter: parameter,
+    type: type,
   };
   await job_init(new_job);
   all_jobs.push(new_job);
@@ -136,22 +161,26 @@ bot.command("stats", async (ctx) => {
 //       "You are a teaching assistant involved in an AI workshop at ZHdK, an art school in Zürich. Keep your answers short and do not make lists or other boring text blocks. Your goal is to teach the participants about AI in various ways. Telling interesting stories or facts might be one of your tools. If it is the first time some one is writing a message within this chat, say hello or welcome the person with it's name, but only if newly eentered the conversation. Do not say the name of the user to often ore repetedly, it is enough to use it in the begining and maybe from time to time during the conversation. It is not good to repeat names to often, therefore do not end a sentence with the name of the user if it is not neccesary. Never start a sentence with 'Assistant: ' or similar, it is not nessesary.",
 //   },
 // ];
-let numberOfMessages = 1000;
+let numberOfMessages = 100;
 
 bot.hears(/\b(?:imagine|Traum)\b/, async (ctx) => {
+  bot.telegram.sendChatAction(await storage.getItem("conversation"), "typing");
   // Send the user's message to the ChatGPT API for images
   const response = await openai.createImage({
     prompt: ctx.message.text,
     n: 1,
     size: "512x512",
   });
+  // console.log(response.data.data[0].url);
   bot.telegram.sendPhoto(
-    await storage.getItem("conversation"),
+    // await storage.getItem("conversation"),
+    ctx.chat.id,
     response.data.data[0].url
   );
 });
 
 bot.hears(/\b(?:Chatoni|chatoni)\b/, async (ctx) => {
+  bot.telegram.sendChatAction(await storage.getItem("conversation"), "typing");
   let messages = await storage.getItem("messages");
   let context = await storage.getItem("context");
   messages.push({
@@ -160,7 +189,8 @@ bot.hears(/\b(?:Chatoni|chatoni)\b/, async (ctx) => {
   });
   // Send the user's message to the ChatGPT API
   const chatCompletion = await openai.createChatCompletion({
-    model: "gpt-3.5-turbo",
+    // model: "gpt-3.5-turbo",
+    model: "gpt-3.5-turbo-16k",
     // model: "gpt-4",
     messages: context.concat(messages),
   });
@@ -192,6 +222,59 @@ app.get("/context", async (req, res) => {
   // console.log(context);
   res.json(context[0].content);
 });
+app.get("/files", (req, res) => {
+  let result = {
+    images: [],
+    videos: [],
+  };
+  let images = fs
+    .readdirSync(__dirname + "/assets/upload/images")
+    .forEach((element) => {
+      if (element[0] != ".") {
+        result.images.push(element);
+      }
+    });
+  let videos = fs
+    .readdirSync(__dirname + "/assets/upload/videos")
+    .forEach((element) => {
+      if (element[0] != ".") {
+        result.videos.push(element);
+      }
+    });
+  res.json(result);
+});
+app.post("/upload", (req, res) => {
+  // Get the file that was set to our field named "image"
+  if (req.body.type == "IMAGE") {
+    const { file } = req.files;
+
+    // If no image submitted, exit
+    if (!file) return res.sendStatus(400);
+
+    // If does not have image mime type prevent from uploading
+    // if (/^image/.test(file.mimetype)) return res.sendStatus(400);
+
+    // Move the uploaded image to our upload folder
+    file.mv(__dirname + "/assets/upload/images/" + file.name);
+
+    res.sendStatus(200);
+  }
+  if (req.body.type == "VIDEO") {
+    const { file } = req.files;
+
+    // If no image submitted, exit
+    if (!file) return res.sendStatus(400);
+
+    // If does not have image mime type prevent from uploading
+    // if (/^image/.test(image.mimetype)) return res.sendStatus(400);
+
+    // Move the uploaded image to our upload folder
+    file.mv(__dirname + "/assets/upload/videos/" + file.name);
+
+    res.sendStatus(200);
+  }
+  io.emit("refresh");
+});
 
 // define socket.io commands
 io.on("connection", (socket) => {
@@ -200,7 +283,7 @@ io.on("connection", (socket) => {
     io.emit("refresh"); // there is some issue with who is included in the broadcast, I d not know yet
   });
   socket.on("add date", (msg) => {
-    job_add(new Date(msg[0]), msg[1]);
+    job_add(new Date(msg[0]), msg[1], msg[2]);
     io.emit("refresh");
   });
   socket.on("remove date", (msg) => {

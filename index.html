@@ -2,23 +2,83 @@
 <html>
   <head>
     <title>Chatoni Backend Interface</title>
-    <link rel="stylesheet" type="text/css" href="./reset.css" />
-    <link rel="stylesheet" type="text/css" href="./main.css" />
-    <script type="module" src="https://md-block.verou.me/md-block.js"></script>
+    <link rel="stylesheet" type="text/css" href="./css/reset.css" />
+    <link rel="stylesheet" type="text/css" href="./css/main.css" />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   </head>
   <body>
     <div id="app">
       <h1>Chatoni Backend Interface</h1>
       <div class="context">
         <h2>Context of the Bot</h2>
-        <textarea cols="30" rows="10" v-model="context"></textarea>
-        <button @click="update_context">Update Context</button>
+        <textarea
+          cols="30"
+          rows="10"
+          v-model="context"
+          @change="update_context"
+        ></textarea>
       </div>
       <div class="scheduler">
-        <h2>Task Scheduler</h2>
+        <div class="top">
+          <h2>Task Scheduler</h2>
+          <button
+            @click="type = 'VIDEO'"
+            :class="{ 'active' : type == 'VIDEO' }"
+          >
+            📹
+          </button>
+          <button
+            @click="type = 'IMAGE'"
+            :class="{ 'active' : type == 'IMAGE' }"
+          >
+            📷
+          </button>
+          <button @click="type = 'TEXT'" :class="{ 'active' : type == 'TEXT' }">
+            🗞️
+          </button>
+        </div>
         <div class="add">
-          <textarea rows="4" v-model="text"></textarea>
-          <input v-model="date" type="datetime-local" />
+          <textarea
+            rows="4"
+            v-model="text"
+            placeholder="Markdown formatted text"
+            v-if="type == 'TEXT'"
+          ></textarea>
+          <div class="select">
+            <select v-model="text" v-if="type == 'IMAGE'">
+              <option disabled value="">Please select image</option>
+              <option v-for="image in images">{{ image }}</option>
+            </select>
+            <select v-model="text" v-if="type == 'VIDEO'">
+              <option disabled value="">Please select video</option>
+              <option v-for="video in videos">{{ video }}</option>
+            </select>
+            <form
+              @submit.prevent="onSubmit"
+              v-if="type == 'IMAGE' || type == 'VIDEO'"
+            >
+              <label for="file-upload" class="custom-file-upload">
+                Upload File
+              </label>
+              <input
+                id="file-upload"
+                v-if="type == 'IMAGE'"
+                type="file"
+                ref="fileupload"
+                accept="image/*"
+                @change="onSubmit"
+              />
+              <input
+                id="file-upload"
+                v-if="type == 'VIDEO'"
+                type="file"
+                ref="fileupload"
+                accept="video/*"
+                @change="onSubmit"
+              />
+            </form>
+          </div>
+          <input v-model="date" type="datetime-local" step="1" />
           <button @click="add_job">Add Task</button>
         </div>
         <div
@@ -27,21 +87,26 @@
           :class="{ 'inactive' : !job.state }"
         >
           <div class="header">
-            <div class="text">{{ new Date(job.date).toUTCString() }}</div>
+            <div class="date">
+              {{ new Date(job.date).toLocaleString('de-CH', { timeZone:
+              'Europe/Zurich' }) }}
+            </div>
+            <div class="type">{{ job.type }}</div>
             <button
               class="controll_button"
               @click="remove_job(job.id, $event) "
             >
-              Remove
+              ×
             </button>
           </div>
-          <div class="message">{{ job.message }}</div>
-          <!-- <md-block class="message"> {{ job.message }} </md-block> -->
+          <div class="message">
+            <div v-html="job.message"></div>
+          </div>
         </div>
       </div>
     </div>
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="./script.js"></script>
+    <script src="./js/script.js"></script>
   </body>
 </html>
