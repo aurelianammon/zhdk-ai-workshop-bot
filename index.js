@@ -203,12 +203,44 @@ bot.hears(/\b(?:Chatoni|chatoni)\b/, async (ctx) => {
 
 bot.on("message", async (ctx) => {
   let messages = await storage.getItem("messages");
-  messages.push({
-    role: "user",
-    content: ctx.message.from.first_name + ": " + ctx.message.text,
-  });
+  const files = ctx.update.message.photo;
+  if (files) {
+    let caption = await captionizer(
+      await ctx.telegram.getFileLink(files[3].file_id)
+    );
+    messages.push({
+      role: "user",
+      content: "image_description: " + caption,
+    });
+    if (ctx.update.message.caption) {
+      messages.push({
+        role: "user",
+        content:
+          ctx.message.from.first_name + ": " + ctx.update.message.caption,
+      });
+    }
+  } else {
+    messages.push({
+      role: "user",
+      content: ctx.message.from.first_name + ": " + ctx.message.text,
+    });
+  }
   await storage.setItem("messages", messages.slice(-numberOfMessages));
 });
+
+//image caption api
+async function captionizer(image) {
+  TransformersApi = Function('return import("@huggingface/inference")')();
+  const { HfInference } = await TransformersApi;
+
+  const inference = new HfInference(process.env.HF_ACCESS_TOKEN);
+  let caption = await inference.imageToText({
+    // data: await image.blob(),
+    data: await (await fetch(image)).blob(),
+    model: "Salesforce/blip-image-captioning-base",
+  });
+  return caption.generated_text;
+}
 
 // define express routes
 app.get("/", (req, res) => {
