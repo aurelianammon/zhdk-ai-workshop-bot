@@ -80,6 +80,19 @@ async function job_init(job) {
         { parse_mode: "html" }
       );
     }
+    if (job.type == "PROMPT") {
+      // console.log(job.message);
+      const id = await storage.getItem("conversation");
+      let messages = await storage.getItem("messages");
+      messages.push({
+        role: "user",
+        content: job.message,
+      });
+      let completion = await ai_completion(messages);
+      messages.push({ role: "assistant", content: completion });
+      await storage.setItem("messages", messages.slice(-numberOfMessages));
+      bot.telegram.sendMessage(id, completion);
+    }
     io.emit("refresh");
   });
 }
@@ -182,12 +195,19 @@ bot.hears(/\b(?:imagine|Traum)\b/, async (ctx) => {
 bot.hears(/\b(?:Chatoni|chatoni)\b/, async (ctx) => {
   bot.telegram.sendChatAction(await storage.getItem("conversation"), "typing");
   let messages = await storage.getItem("messages");
-  let context = await storage.getItem("context");
   messages.push({
     role: "user",
     content: ctx.message.from.first_name + ": " + ctx.message.text,
   });
+  let completion = await ai_completion(messages);
+  messages.push({ role: "assistant", content: completion });
+  await storage.setItem("messages", messages.slice(-numberOfMessages));
+  ctx.reply(completion);
+});
+
+async function ai_completion(messages = []) {
   // Send the user's message to the ChatGPT API
+  let context = await storage.getItem("context");
   const chatCompletion = await openai.createChatCompletion({
     // model: "gpt-3.5-turbo",
     model: "gpt-3.5-turbo-16k",
@@ -196,10 +216,8 @@ bot.hears(/\b(?:Chatoni|chatoni)\b/, async (ctx) => {
   });
   // Send the response from ChatGPT back to the user
   let text = chatCompletion.data.choices[0].message.content;
-  messages.push({ role: "assistant", content: text });
-  await storage.setItem("messages", messages.slice(-numberOfMessages));
-  ctx.reply(text);
-});
+  return text;
+}
 
 bot.on("message", async (ctx) => {
   let messages = await storage.getItem("messages");

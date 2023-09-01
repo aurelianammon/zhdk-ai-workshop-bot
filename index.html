@@ -36,13 +36,19 @@
           <button @click="type = 'TEXT'" :class="{ 'active' : type == 'TEXT' }">
             🗞️
           </button>
+          <button
+            @click="type = 'PROMPT'"
+            :class="{ 'active' : type == 'PROMPT' }"
+          >
+            🤖
+          </button>
         </div>
         <div class="add">
           <textarea
             rows="4"
             v-model="text"
             placeholder="Markdown formatted text"
-            v-if="type == 'TEXT'"
+            v-if="type == 'TEXT' || type == 'PROMPT'"
           ></textarea>
           <div class="select">
             <select v-model="text" v-if="type == 'IMAGE'">
