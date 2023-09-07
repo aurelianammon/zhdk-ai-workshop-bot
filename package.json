@@ -1,4 +1,11 @@
 {
+  "name": "ai-groupchat-manager",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "author": "Aurelian Ammon",
+  "license": "MIT",
   "dependencies": {
     "@huggingface/inference": "^1.8.0",
     "@xenova/transformers": "^2.5.4",

@@ -1,3 +1,12 @@
+// Define "require"
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+
+import { dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 require("dotenv").config();
 const schedule = require("node-schedule");
 const { v4: uuidv4 } = require("uuid");
@@ -99,7 +108,7 @@ async function job_init(job) {
 
 async function job_add(date, message, type) {
   let all_jobs = await storage.getItem("scheduled_jobs");
-  new_job = {
+  let new_job = {
     id: uuidv4(),
     date: date,
     message: message,
