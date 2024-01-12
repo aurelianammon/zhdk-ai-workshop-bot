@@ -210,8 +210,9 @@ async function ai_completion(messages = []) {
   let context = await storage.getItem("context");
   const chatCompletion = await openai.createChatCompletion({
     // model: "gpt-3.5-turbo",
-    model: "gpt-3.5-turbo-16k",
-    // model: "gpt-4",
+    // model: "gpt-3.5-turbo-16k",
+    model: "gpt-4",
+    // model: "gpt-4-1106-preview",
     messages: context.concat(messages),
   });
   // Send the response from ChatGPT back to the user
