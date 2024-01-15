@@ -177,7 +177,7 @@ bot.command("stats", async (ctx) => {
 let numberOfMessages = 100;
 
 bot.hears(/\b(?:imagine|Traum)\b/, async (ctx) => {
-  bot.telegram.sendChatAction(await storage.getItem("conversation"), "typing");
+  bot.telegram.sendChatAction(ctx.chat.id, "typing");
   // Send the user's message to the ChatGPT API for images
   const response = await openai.createImage({
     prompt: ctx.message.text,
@@ -193,7 +193,7 @@ bot.hears(/\b(?:imagine|Traum)\b/, async (ctx) => {
 });
 
 bot.hears(/\b(?:Chatoni|chatoni)\b/, async (ctx) => {
-  bot.telegram.sendChatAction(await storage.getItem("conversation"), "typing");
+  bot.telegram.sendChatAction(ctx.chat.id, "typing");
   let messages = await storage.getItem("messages");
   messages.push({
     role: "user",
