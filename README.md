@@ -46,7 +46,7 @@ Check out the [explanation](https://huggingface.co/docs/hub/security-tokens#) on
 
 ## Installation
 
-Install the required npm modules.
+Install the required npm modules within the project folder.
 
 ```
 npm install
