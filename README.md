@@ -63,4 +63,4 @@ npm run start
 
 The bot should now be running and also provide a local backend for configuration on Port 3000. Open this [link](http://localhost:3000/) in any browser you prefer and set your desired context.
 
-To make the bot fully work you must set a main group for scheduling actions. Therefore open Telegram, create a group, and post `/link`. The group is now linked to the bot, which is allowing the bot to send messages to the group without prior interaction. You can change the main group at any time.
+To make the bot fully work you must set a main group for scheduling actions. Therefore open Telegram, create a group, add your bot, and post `/link`. The group is now linked to the bot, which is allowing the bot to send messages to the group without prior interaction. You can change the main group at any time.
