@@ -6,11 +6,23 @@ body {
     Arial, sans-serif;
 }
 
-h1 {
+h1,
+h1 input {
   font-size: calc(30px + 0.390625vw);
   font-weight: 900;
   margin-bottom: 20px;
   font-style: italic;
+}
+h1 input {
+  cursor: pointer;
+  color: coral;
+  text-decoration: underline;
+  border: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+}
+h1 input:focus {
+  outline: none;
 }
 h2 {
   font-size: calc(20px + 0.390625vw);
@@ -186,8 +198,9 @@ input[type="file"] {
   resize: vertical;
   /* line-height: 17px; */
 }
-.context button {
-  /* float: right; */
+
+.history {
+  margin-top: 25px;
 }
 
 .footer {

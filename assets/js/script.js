@@ -13,6 +13,8 @@ createApp({
       images: [],
       videos: [],
       FILE: null,
+      name: "ASSISTANT",
+      history: [],
     };
   },
   computed: {
@@ -43,6 +45,14 @@ createApp({
       socket.emit("update context", this.context);
       //   this.update();
     },
+    update_name(e) {
+      socket.emit("update name", this.name);
+      //   this.update();
+    },
+    remove_message(id, e) {
+      socket.emit("remove message", id);
+      //   this.update();
+    },
     async update(e) {
       let tempData;
       await fetch("/jobs") // <-- this path surprises me
@@ -58,6 +68,14 @@ createApp({
         .then((response) => response.json())
         .then((data) => (tempData = data));
       this.context = tempData;
+      await fetch("/name") // <-- this path surprises me
+        .then((response) => response.json())
+        .then((data) => (tempData = data));
+      this.name = tempData;
+      await fetch("/messages") // <-- this path surprises me
+        .then((response) => response.json())
+        .then((data) => (tempData = data));
+      this.history = tempData;
       await fetch("/files") // <-- this path surprises me
         .then((response) => response.json())
         .then((data) => (tempData = data));

@@ -1,14 +1,23 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Chatoni Backend Interface</title>
+    <title>Assistant Backend Interface</title>
     <link rel="stylesheet" type="text/css" href="./css/reset.css" />
     <link rel="stylesheet" type="text/css" href="./css/main.css" />
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   </head>
   <body>
     <div id="app">
-      <h1>Chatoni Backend Interface</h1>
+      <h1>
+        Backend Interface
+        <input
+          title="Click to edit name 🖖"
+          class="nameInput"
+          v-model="name"
+          @change="update_name"
+          @focus="$event.target.select()"
+        />
+      </h1>
       <div class="context">
         <h2>Context of the Bot</h2>
         <textarea
@@ -107,6 +116,24 @@
           </div>
           <div class="message">
             <div v-html="job.message"></div>
+          </div>
+        </div>
+      </div>
+      <div class="history">
+        <h2>Active Chat History</h2>
+        <div class="job" v-for="(message, index) in history">
+          <div class="header">
+            <div class="type">{{ message.role }}</div>
+            <button
+              title="Remove message from history 💀"
+              class="controll_button"
+              @click="remove_message(index, $event) "
+            >
+              ×
+            </button>
+          </div>
+          <div class="message">
+            <div v-html="message.content"></div>
           </div>
         </div>
       </div>
