@@ -2,13 +2,19 @@ require("dotenv").config();
 const schedule = require("node-schedule");
 const { v4: uuidv4 } = require("uuid");
 const fs = require("fs");
+const path = require("path");
 
 const { Telegraf } = require("telegraf");
 let bot = new Telegraf(process.env.TELEGRAM_KEY);
 
-const { Configuration, OpenAIApi } = require("openai");
-const configuration = new Configuration({ apiKey: process.env.OPENAI_KEY });
-const openai = new OpenAIApi(configuration);
+// const { Configuration, OpenAIApi } = require("openai");
+// const configuration = new Configuration({ apiKey: process.env.OPENAI_KEY });
+// const openai = new OpenAIApi(configuration);
+
+const OpenAI = require("openai");
+const openai = new OpenAI({
+  apiKey: process.env["OPENAI_KEY"],
+});
 
 const express = require("express");
 const fileUpload = require("express-fileupload");
@@ -20,6 +26,8 @@ const http = require("http");
 const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server);
+
+const ai_model = "gpt-4-1106-preview";
 
 // init local sorage to persist user data and context
 const storage = require("node-persist");
@@ -139,9 +147,27 @@ async function init_bot() {
       let completion = await ai_completion(messages);
       messages.push({ role: "assistant", content: completion });
       await storage.setItem("messages", messages.slice(-numberOfMessages));
-      ctx.reply(completion);
+
+      // ctx.reply(completion);
+      // voice Text
+      ai_voice(completion, ctx.chat.id);
     }
   );
+
+  bot.on("voice", async (ctx) => {
+    console.log("voice");
+    // try {
+    //   /* ... */
+    //   const text = await recognize({
+    //     inputStream: voiceMessageStream,
+    //     transformStream: opusStream({ forceWav: true, rate: 16000 }),
+    //   });
+
+    //   ctx.reply(text, { reply_to_message_id: ctx.message.message_id });
+    // } catch {
+    //   /* ... */
+    // }
+  });
 
   bot.on("message", async (ctx) => {
     let messages = await storage.getItem("messages");
@@ -160,6 +186,10 @@ async function init_bot() {
           content:
             ctx.message.from.first_name + ": " + ctx.update.message.caption,
         });
+        bot.telegram.sendChatAction(ctx.chat.id, "typing");
+        let completion = await ai_completion(messages);
+        messages.push({ role: "assistant", content: completion });
+        ctx.reply(completion);
       }
     } else {
       messages.push({
@@ -258,14 +288,27 @@ async function job_remove(id) {
   await storage.setItem("scheduled_jobs", all_jobs);
 }
 
+async function ai_voice(text, chat_id) {
+  bot.telegram.sendChatAction(chat_id, "typing");
+
+  const response = await openai.audio.speech.create({
+    model: "tts-1",
+    voice: "alloy",
+    input: text,
+  });
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  bot.telegram.sendVoice(chat_id, { source: buffer });
+}
+
 async function ai_completion(messages = []) {
   // Send the user's message to the ChatGPT API
   let context = await storage.getItem("context");
-  const chat = await openai.createChatCompletion({
+  const chat = await openai.chat.completions.create({
     // model: "gpt-3.5-turbo",
     // model: "gpt-3.5-turbo-16k",
     // model: "gpt-4",
-    model: "gpt-4-1106-preview",
+    model: ai_model,
     messages: context.concat(messages),
     functions: [
       {
@@ -287,12 +330,11 @@ async function ai_completion(messages = []) {
     function_call: "auto",
   });
 
-  let answer = chat.data.choices[0].message?.content;
-  const wantsToUseFunction =
-    chat.data.choices[0].finish_reason === "function_call";
+  let answer = chat.choices[0].message?.content;
+  const wantsToUseFunction = chat.choices[0].finish_reason === "function_call";
 
   if (wantsToUseFunction) {
-    const functionToUse = chat.data.choices[0].message?.function_call;
+    const functionToUse = chat.choices[0].message?.function_call;
     let dataToReturn = {};
 
     if (functionToUse.name === "getStaffInfo") {
@@ -302,8 +344,8 @@ async function ai_completion(messages = []) {
     }
 
     // new completion API call
-    const chatWithFunction = await openai.createChatCompletion({
-      model: "gpt-4-1106-preview",
+    const chatWithFunction = await openai.chat.completions.create({
+      model: ai_model,
       messages: context.concat(messages).concat([
         {
           role: "function",
@@ -314,7 +356,7 @@ async function ai_completion(messages = []) {
     });
 
     // overwrite the answer we will return to the user
-    answer = chatWithFunction.data.choices[0].message?.content;
+    answer = chatWithFunction.choices[0].message?.content;
   }
   io.emit("refresh");
   return answer;
