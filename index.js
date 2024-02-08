@@ -4,6 +4,8 @@ const { v4: uuidv4 } = require("uuid");
 const fs = require("fs");
 const path = require("path");
 
+const { toFile } = require("openai/uploads");
+
 const { Telegraf } = require("telegraf");
 let bot = new Telegraf(process.env.TELEGRAM_KEY);
 
@@ -148,56 +150,117 @@ async function init_bot() {
       messages.push({ role: "assistant", content: completion });
       await storage.setItem("messages", messages.slice(-numberOfMessages));
 
-      // ctx.reply(completion);
+      // standart answer
+      ctx.reply(completion);
+
       // voice Text
-      ai_voice(completion, ctx.chat.id);
+      // ai_voice(completion, ctx.chat.id);
     }
   );
 
-  bot.on("voice", async (ctx) => {
-    console.log("voice");
-    // try {
-    //   /* ... */
-    //   const text = await recognize({
-    //     inputStream: voiceMessageStream,
-    //     transformStream: opusStream({ forceWav: true, rate: 16000 }),
-    //   });
+  // Event-Handler für eingehende Fotos
+  // bot.on("photo", (ctx) => {
+  //   console.log("Ein Foto wurde empfangen!");
+  //   const photos = ctx.message.photo;
+  //   // Fotos sind in verschiedenen Größen verfügbar, das letzte Element im Array hat die höchste Qualität
+  //   const highestQualityPhoto = photos[photos.length - 1];
+  //   console.log("Detail des Fotos:", highestQualityPhoto);
 
-    //   ctx.reply(text, { reply_to_message_id: ctx.message.message_id });
-    // } catch {
-    //   /* ... */
-    // }
-  });
+  //   // 'file_id' verwenden, um das Foto herunterzuladen oder weiterzuverarbeiten.
+  //   const fileId = highestQualityPhoto.file_id;
+  //   console.log("File ID:", fileId);
+
+  //   // Bestätige den Erhalt des Fotos an den Benutzer
+  //   ctx.reply("Vielen Dank, ich habe dein Foto empfangen.");
+  // });
 
   bot.on("message", async (ctx) => {
     let messages = await storage.getItem("messages");
-    const files = ctx.update.message.photo;
-    if (files) {
+
+    // TEXT
+    // push test to database
+    if ("text" in ctx.message) {
+      console.log("Textnachricht:", ctx.message.text);
+
+      messages.push({
+        role: "user",
+        content: ctx.message.from.first_name + ": " + ctx.message.text,
+      });
+    }
+
+    // PHOTO
+    // interpret photo content and check for caption
+    if ("photo" in ctx.message) {
+      // console.log("Fotonachricht erhalten, Caption: " + ctx.message.caption);
+
       let caption = await captionizer(
-        await ctx.telegram.getFileLink(files[3].file_id)
+        await ctx.telegram.getFileLink(
+          ctx.message.photo[ctx.message.photo.length - 1].file_id
+        )
       );
+
       messages.push({
         role: "user",
         content: "image_description: " + caption,
       });
-      if (ctx.update.message.caption) {
+
+      if (ctx.message.caption) {
         messages.push({
           role: "user",
-          content:
-            ctx.message.from.first_name + ": " + ctx.update.message.caption,
+          content: ctx.message.from.first_name + ": " + ctx.message.caption,
         });
         bot.telegram.sendChatAction(ctx.chat.id, "typing");
         let completion = await ai_completion(messages);
         messages.push({ role: "assistant", content: completion });
         ctx.reply(completion);
       }
-    } else {
+    }
+
+    // VOICE
+    // read voice message
+    if ("voice" in ctx.message) {
+      // console.log("Voice-Nachricht erhalten");
+
+      // Erhalte die file_id der Voice Message
+      const fileId = ctx.message.voice.file_id;
+      // Fordere über die Telegram API die URL der Datei an
+      const fileUrl = await ctx.telegram.getFileLink(fileId);
+
+      // Lade die Datei herunter und speichere sie lokal
+      const response = await fetch(fileUrl.href);
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer); // Wandle ArrayBuffer in Buffer um
+
+      const file = await toFile(buffer);
+
+      const transcript = await openai.audio.transcriptions.create({
+        model: "whisper-1",
+        file: await toFile(file, "audio.ogg", {
+          contentType: "audio/ogg",
+        }),
+      });
+
+      bot.telegram.sendChatAction(ctx.chat.id, "typing");
+      // let messages = await storage.getItem("messages");
       messages.push({
         role: "user",
-        content: ctx.message.from.first_name + ": " + ctx.message.text,
+        content: ctx.message.from.first_name + ": " + transcript.text,
       });
+
+      let completion = await ai_completion(messages);
+      messages.push({ role: "assistant", content: completion });
+      await storage.setItem("messages", messages.slice(-numberOfMessages));
+
+      console.log(transcript.text);
+
+      ai_voice(completion, ctx.chat.id);
+
+      // Verarbeite Voice
+      // ctx.message.voice beinhaltet Informationen über die Voice-Nachricht
     }
+
     await storage.setItem("messages", messages.slice(-numberOfMessages));
+    io.emit("refresh");
   });
 }
 
@@ -289,7 +352,7 @@ async function job_remove(id) {
 }
 
 async function ai_voice(text, chat_id) {
-  bot.telegram.sendChatAction(chat_id, "typing");
+  // bot.telegram.sendChatAction(chat_id, "typing");
 
   const response = await openai.audio.speech.create({
     model: "tts-1",
