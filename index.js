@@ -6,6 +6,8 @@ const path = require("path");
 
 const { toFile } = require("openai/uploads");
 
+const tools = require("./tools.js");
+
 const { Telegraf } = require("telegraf");
 let bot = new Telegraf(process.env.TELEGRAM_KEY);
 
@@ -158,29 +160,13 @@ async function init_bot() {
     }
   );
 
-  // Event-Handler für eingehende Fotos
-  // bot.on("photo", (ctx) => {
-  //   console.log("Ein Foto wurde empfangen!");
-  //   const photos = ctx.message.photo;
-  //   // Fotos sind in verschiedenen Größen verfügbar, das letzte Element im Array hat die höchste Qualität
-  //   const highestQualityPhoto = photos[photos.length - 1];
-  //   console.log("Detail des Fotos:", highestQualityPhoto);
-
-  //   // 'file_id' verwenden, um das Foto herunterzuladen oder weiterzuverarbeiten.
-  //   const fileId = highestQualityPhoto.file_id;
-  //   console.log("File ID:", fileId);
-
-  //   // Bestätige den Erhalt des Fotos an den Benutzer
-  //   ctx.reply("Vielen Dank, ich habe dein Foto empfangen.");
-  // });
-
   bot.on("message", async (ctx) => {
     let messages = await storage.getItem("messages");
 
     // TEXT
     // push test to database
     if ("text" in ctx.message) {
-      console.log("Textnachricht:", ctx.message.text);
+      // console.log("Textnachricht:", ctx.message.text);
 
       messages.push({
         role: "user",
