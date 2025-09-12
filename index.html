@@ -1,145 +1,153 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Assistant Backend Interface</title>
-    <link rel="stylesheet" type="text/css" href="./css/reset.css" />
-    <link rel="stylesheet" type="text/css" href="./css/main.css" />
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  </head>
-  <body>
-    <div id="app">
-      <h1>
-        Backend Interface
-        <input
-          title="Click to edit name 🖖"
-          class="nameInput"
-          v-model="name"
-          @change="update_name"
-          @focus="$event.target.select()"
-        />
-      </h1>
-      <div class="context">
-        <h2>Context of the Bot</h2>
-        <textarea
-          cols="30"
-          rows="10"
-          v-model="context"
-          @change="update_context"
-        ></textarea>
-      </div>
-      <div class="scheduler">
-        <div class="top">
-          <h2>Task Scheduler</h2>
-          <button
-            @click="type = 'VIDEO'"
-            :class="{ 'active' : type == 'VIDEO' }"
-          >
-            📹
-          </button>
-          <button
-            @click="type = 'IMAGE'"
-            :class="{ 'active' : type == 'IMAGE' }"
-          >
-            📷
-          </button>
-          <button @click="type = 'TEXT'" :class="{ 'active' : type == 'TEXT' }">
-            🗞️
-          </button>
-          <button
-            @click="type = 'PROMPT'"
-            :class="{ 'active' : type == 'PROMPT' }"
-          >
-            🤖
-          </button>
-        </div>
-        <div class="add">
-          <textarea
-            rows="4"
-            v-model="text"
-            placeholder="Markdown formatted text"
-            v-if="type == 'TEXT' || type == 'PROMPT'"
-          ></textarea>
-          <div class="select">
-            <select v-model="text" v-if="type == 'IMAGE'">
-              <option disabled value="">Please select image</option>
-              <option v-for="image in images">{{ image }}</option>
-            </select>
-            <select v-model="text" v-if="type == 'VIDEO'">
-              <option disabled value="">Please select video</option>
-              <option v-for="video in videos">{{ video }}</option>
-            </select>
-            <form
-              @submit.prevent="onSubmit"
-              v-if="type == 'IMAGE' || type == 'VIDEO'"
-            >
-              <label for="file-upload" class="custom-file-upload">
-                Upload File
-              </label>
-              <input
-                id="file-upload"
-                v-if="type == 'IMAGE'"
-                type="file"
-                ref="fileupload"
-                accept="image/*"
-                @change="onSubmit"
-              />
-              <input
-                id="file-upload"
-                v-if="type == 'VIDEO'"
-                type="file"
-                ref="fileupload"
-                accept="video/*"
-                @change="onSubmit"
-              />
-            </form>
-          </div>
-          <input v-model="date" type="datetime-local" step="1" />
-          <button @click="add_job">Add Task</button>
-        </div>
-        <div
-          class="job"
-          v-for="job in filtered_jobs"
-          :class="{ 'inactive' : !job.state }"
-        >
-          <div class="header">
-            <div class="date">
-              {{ new Date(job.date).toLocaleString('de-CH', { timeZone:
-              'Europe/Zurich' }) }}
+    <head>
+        <title>Assistant Backend Interface</title>
+        <link rel="stylesheet" type="text/css" href="./css/reset.css" />
+        <link rel="stylesheet" type="text/css" href="./css/main.css" />
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    </head>
+    <body>
+        <div id="app">
+            <h1>
+                Backend Interface
+                <input
+                    title="Click to edit name 🖖"
+                    class="nameInput"
+                    v-model="name"
+                    @change="update_name"
+                    @focus="$event.target.select()"
+                />
+            </h1>
+            <p>hello</p>
+            <div class="context">
+                <h2>Context of the Bot</h2>
+                <textarea
+                    cols="30"
+                    rows="10"
+                    v-model="context"
+                    @change="update_context"
+                ></textarea>
             </div>
-            <div class="type">{{ job.type }}</div>
-            <button
-              class="controll_button"
-              @click="remove_job(job.id, $event) "
-            >
-              ×
-            </button>
-          </div>
-          <div class="message">
-            <div v-html="job.message"></div>
-          </div>
+            <div class="scheduler">
+                <div class="top">
+                    <h2>Task Scheduler</h2>
+                    <button
+                        @click="type = 'VIDEO'"
+                        :class="{ 'active' : type == 'VIDEO' }"
+                    >
+                        📹
+                    </button>
+                    <button
+                        @click="type = 'IMAGE'"
+                        :class="{ 'active' : type == 'IMAGE' }"
+                    >
+                        📷
+                    </button>
+                    <button
+                        @click="type = 'TEXT'"
+                        :class="{ 'active' : type == 'TEXT' }"
+                    >
+                        🗞️
+                    </button>
+                    <button
+                        @click="type = 'PROMPT'"
+                        :class="{ 'active' : type == 'PROMPT' }"
+                    >
+                        🤖
+                    </button>
+                </div>
+                <div class="add">
+                    <textarea
+                        rows="4"
+                        v-model="text"
+                        placeholder="Markdown formatted text"
+                        v-if="type == 'TEXT' || type == 'PROMPT'"
+                    ></textarea>
+                    <div class="select">
+                        <select v-model="text" v-if="type == 'IMAGE'">
+                            <option disabled value="">
+                                Please select image
+                            </option>
+                            <option v-for="image in images">{{ image }}</option>
+                        </select>
+                        <select v-model="text" v-if="type == 'VIDEO'">
+                            <option disabled value="">
+                                Please select video
+                            </option>
+                            <option v-for="video in videos">{{ video }}</option>
+                        </select>
+                        <form
+                            @submit.prevent="onSubmit"
+                            v-if="type == 'IMAGE' || type == 'VIDEO'"
+                        >
+                            <label for="file-upload" class="custom-file-upload">
+                                Upload File
+                            </label>
+                            <input
+                                id="file-upload"
+                                v-if="type == 'IMAGE'"
+                                type="file"
+                                ref="fileupload"
+                                accept="image/*"
+                                @change="onSubmit"
+                            />
+                            <input
+                                id="file-upload"
+                                v-if="type == 'VIDEO'"
+                                type="file"
+                                ref="fileupload"
+                                accept="video/*"
+                                @change="onSubmit"
+                            />
+                        </form>
+                    </div>
+                    <input v-model="date" type="datetime-local" step="1" />
+                    <button @click="add_job">Add Task</button>
+                </div>
+                <div
+                    class="job"
+                    v-for="job in filtered_jobs"
+                    :class="{ 'inactive' : !job.state }"
+                >
+                    <div class="header">
+                        <div class="date">
+                            {{ new Date(job.date).toLocaleString('de-CH', {
+                            timeZone: 'Europe/Zurich' }) }}
+                        </div>
+                        <div class="type">{{ job.type }}</div>
+                        <button
+                            class="controll_button"
+                            @click="remove_job(job.id, $event) "
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <div class="message">
+                        <div v-html="job.message"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="history">
+                <h2>Active Chat History</h2>
+                <div class="job" v-for="(message, index) in history">
+                    <div class="header">
+                        <div class="type">{{ message.role }}</div>
+                        <button
+                            title="Remove message from history 💀"
+                            class="controll_button"
+                            @click="remove_message(index, $event) "
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <div class="message">
+                        <div v-html="message.content"></div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-      <div class="history">
-        <h2>Active Chat History</h2>
-        <div class="job" v-for="(message, index) in history">
-          <div class="header">
-            <div class="type">{{ message.role }}</div>
-            <button
-              title="Remove message from history 💀"
-              class="controll_button"
-              @click="remove_message(index, $event) "
-            >
-              ×
-            </button>
-          </div>
-          <div class="message">
-            <div v-html="message.content"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="./js/script.js"></script>
-  </body>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+        <script src="./js/script.js"></script>
+    </body>
 </html>
